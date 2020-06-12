@@ -1,0 +1,37 @@
+{
+  "name": "ethereum-events",
+  "version": "0.0.0",
+  "description": "Efficient and reliable event listener for Ethereum.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --recursive --exit",
+    "coverage": "nyc --all npm test",
+    "coveralls": "nyc npm test && nyc report --reporter=text-lcov | coveralls",
+    "lint": "eslint --ignore-path .gitignore .",
+    "lint:fix": "eslint --ignore-path .gitignore . --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AleG94/ethereum-events.git"
+  },
+  "keywords": [
+    "ethereum",
+    "events",
+    "listener",
+    "solidity",
+    "logs"
+  ],
+  "author": "Alessandro Genovese",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/AleG94/ethereum-events/issues"
+  },
+  "homepage": "https://github.com/AleG94/ethereum-events#readme",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "coveralls": "^3.1.0",
+    "eslint": "^7.2.0",
+    "mocha": "^7.2.0",
+    "nyc": "^15.1.0"
+  }
+}
