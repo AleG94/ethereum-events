@@ -1,0 +1,36 @@
+version: 2.1
+
+executors:
+  node:
+    docker:
+      - image: circleci/node:12
+
+jobs:
+  test:
+    executor: node
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps-{{ .Branch }}-{{ checksum "package.json" }}
+      - run: 
+          name: Installing dependencies
+          command: npm ci
+      - save_cache:
+          key: deps-{{ .Branch }}-{{ checksum "package.json" }}
+          paths:
+            - "node_modules"
+      - run:
+          name: Linting code
+          command: npm run lint
+      - run: 
+          name: Running tests
+          command: npm test
+      - run:
+          name: Running coverage
+          command: npm run coveralls
+
+workflows:
+  version: 2.1
+  main:
+    jobs:
+      - test
