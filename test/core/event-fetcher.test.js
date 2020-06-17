@@ -20,7 +20,7 @@ describe('Event Fetcher', function () {
   beforeEach(function () {
     const web3 = {
       eth: {
-        getBlock: sinon.stub().resolves(block),
+        getBlock: sinon.stub().withArgs(blockHash).resolves(block),
         getPastLogs: sinon.stub().resolves([log])
       }
     };
