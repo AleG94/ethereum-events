@@ -109,4 +109,18 @@ describe('Ethereum Events', function () {
     confirmedBlockCb.callCount.should.be.equal(1);
     unconfirmedBlockCb.callCount.should.be.equal(1);
   });
+
+  it('should stop listening', function () {
+    sinon.stub(this.ethereumEvents._polling, 'stop');
+
+    const block = { number: 2, status: 'confirmed', events: [{ event: 'Event' }] };
+    const blockCb = sinon.stub();
+
+    this.ethereumEvents.on('block.confirmed', blockCb);
+    this.ethereumEvents.stop();
+    this.ethereumEvents._polling._emitter.emit('block', block);
+
+    blockCb.called.should.be.false;
+    this.ethereumEvents._polling.stop.called.should.be.true;
+  });
 });

@@ -46,6 +46,7 @@ describe('Block Polling', function () {
 
     this.polling.start();
 
+    this.polling._running.should.be.true;
     this.polling._poll.calledWith(startBlock).should.be.true;
   });
 
@@ -128,6 +129,8 @@ describe('Block Polling', function () {
   });
 
   it('should restart polling from the same block if it\'s still unconfirmed', async function () {
+    this.polling._running = true;
+
     sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
     sinon.stub(this.polling, '_poll')
       .onSecondCall().resolves()
@@ -143,6 +146,8 @@ describe('Block Polling', function () {
   });
 
   it('should restart polling from the latest confirmed queried block + 1 if fromBlock is confirmed', async function () {
+    this.polling._running = true;
+
     sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
     sinon.stub(this.polling, '_poll')
       .onSecondCall().resolves()
@@ -159,6 +164,8 @@ describe('Block Polling', function () {
   });
 
   it('should backoff, log and restart polling from the same block if an unknown error occurs', async function () {
+    this.polling._running = true;
+
     const error = new Error();
 
     sinon.stub(console, 'error');
@@ -177,6 +184,8 @@ describe('Block Polling', function () {
   });
 
   it('should backoff and restart polling from the same block if BlockNotFound error occurs', async function () {
+    this.polling._running = true;
+
     const error = new BlockNotFoundError();
 
     sinon.stub(console, 'error');
@@ -192,6 +201,37 @@ describe('Block Polling', function () {
     this.polling._poll.secondCall.calledWith(startBlock);
 
     console.error.calledWith(error).should.be.false;
+  });
+
+  it('should stop polling', async function () {
+    const block = { number: event.blockNumber, status: BlockStatus.UNCONFIRMED, events: events };
+    const blockCb = sinon.stub();
+
+    this.polling.on('block', blockCb);
+    this.polling.stop();
+
+    this.polling._running.should.be.false;
+
+    this.polling._emitter.emit('block', block);
+
+    blockCb.called.should.be.false;
+  });
+
+  it('should not restart polling if it was stopped', async function () {
+    this.polling._running = false;
+
+    sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+    sinon.stub(this.polling, '_poll')
+      .onSecondCall().resolves()
+      .callThrough();
+
+    const fromBlock = latestBlock - confirmations + 2;
+
+    await this.polling._poll(fromBlock);
+
+    this.clock.tick(pollInterval);
+
+    this.polling._poll.callCount.should.be.equal(1);
   });
 
   it('should get block status', function () {
