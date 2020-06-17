@@ -29,8 +29,8 @@
   "homepage": "https://github.com/AleG94/ethereum-events#readme",
   "dependencies": {
     "eth-log-parser": "^0.1.0",
-    "safe-memory-cache": "^2.0.0",
-    "tiny-async-pool": "^1.1.0"
+    "p-limit": "^3.0.1",
+    "safe-memory-cache": "^2.0.0"
   },
   "devDependencies": {
     "chai": "^4.2.0",
