@@ -85,7 +85,7 @@ describe('Event Fetcher', function () {
     });
 
     it('should get selected events if filter is provided', async function () {
-      const contractWithFilters = { ...contract, events: [event.event] };
+      const contractWithFilters = { ...contract, events: [event.name] };
       const eventFetcher = new EventFetcher(this.web3, [contractWithFilters]);
       const events = await eventFetcher.getEvents(fromBlock, toBlock);
 

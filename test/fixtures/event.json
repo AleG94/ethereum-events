@@ -1,5 +1,5 @@
 {
-  "event": "Transfer",
+  "name": "Transfer",
   "contract": "Token",
   "timestamp": 1591110290,
   "blockHash": "0xde42b82c4e28122218d79f8491b05587608a8c9bb87c0d0df9be9fb9ae6f7e13",

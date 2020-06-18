@@ -25,7 +25,7 @@ describe('Ethereum Events', function () {
   });
 
   it('should emit a new block', function (done) {
-    const block = { number: 2, status: 'confirmed', events: [{ event: 'Event' }] };
+    const block = { number: 2, status: 'confirmed', events: [{ name: 'Event' }] };
 
     this.ethereumEvents.on('block.confirmed', (blockNumber, events) => {
       blockNumber.should.be.equal(block.number);
@@ -38,8 +38,8 @@ describe('Ethereum Events', function () {
 
   it('should not emit a new block with the same status if done callback is not called', function () {
     const blocks = [
-      { number: 2, status: 'confirmed', events: [{ event: 'Event' }] },
-      { number: 3, status: 'confirmed', events: [{ event: 'AnotherEvent' }] }
+      { number: 2, status: 'confirmed', events: [{ name: 'Event' }] },
+      { number: 3, status: 'confirmed', events: [{ name: 'AnotherEvent' }] }
     ];
 
     const blockCb = sinon.stub();
@@ -56,8 +56,8 @@ describe('Ethereum Events', function () {
 
   it('should not emit a new block with the same status if done callback is called with an argument', function () {
     const blocks = [
-      { number: 2, status: 'confirmed', events: [{ event: 'Event' }] },
-      { number: 3, status: 'confirmed', events: [{ event: 'AnotherEvent' }] }
+      { number: 2, status: 'confirmed', events: [{ name: 'Event' }] },
+      { number: 3, status: 'confirmed', events: [{ name: 'AnotherEvent' }] }
     ];
 
     const blockCb = sinon.stub().onFirstCall().callsArgWith(2, 'Error');
@@ -75,8 +75,8 @@ describe('Ethereum Events', function () {
 
   it('should emit a new block with same status after done callback is called without arguments', function () {
     const blocks = [
-      { number: 2, status: 'confirmed', events: [{ event: 'Event' }] },
-      { number: 3, status: 'confirmed', events: [{ event: 'AnotherEvent' }] }
+      { number: 2, status: 'confirmed', events: [{ name: 'Event' }] },
+      { number: 3, status: 'confirmed', events: [{ name: 'AnotherEvent' }] }
     ];
 
     const blockCb = sinon.stub().callsArg(2);
@@ -92,8 +92,8 @@ describe('Ethereum Events', function () {
 
   it('should emit a new block with different status even if done callback is not called', function () {
     const blocks = [
-      { number: 2, status: 'confirmed', events: [{ event: 'Event' }] },
-      { number: 3, status: 'unconfirmed', events: [{ event: 'AnotherEvent' }] }
+      { number: 2, status: 'confirmed', events: [{ name: 'Event' }] },
+      { number: 3, status: 'unconfirmed', events: [{ name: 'AnotherEvent' }] }
     ];
 
     const confirmedBlockCb = sinon.stub();
@@ -113,7 +113,7 @@ describe('Ethereum Events', function () {
   it('should stop listening', function () {
     sinon.stub(this.ethereumEvents._polling, 'stop');
 
-    const block = { number: 2, status: 'confirmed', events: [{ event: 'Event' }] };
+    const block = { number: 2, status: 'confirmed', events: [{ name: 'Event' }] };
     const blockCb = sinon.stub();
 
     this.ethereumEvents.on('block.confirmed', blockCb);

@@ -278,7 +278,7 @@ describe('Block Polling', function () {
     });
 
     it('should notify the block again if it\'s still unconfirmed but events changed', function () {
-      const newEvents = [{ event: 'NewEvent' }];
+      const newEvents = [{ name: 'NewEvent' }];
       const blockWithNewEvents = { ...block, events: newEvents };
       const blockCb = sinon.stub();
 
