@@ -39,9 +39,9 @@ describe('Event Fetcher', function () {
     events.should.have.length(1);
     events[0].should.be.deep.equal(event);
 
-    const logOpts = { address: [contract.address], fromBlock: fromBlock, toBlock: toBlock };
+    const callArgs = { address: [contract.address], fromBlock: fromBlock, toBlock: toBlock };
 
-    this.eventFetcher._web3.eth.getPastLogs.calledWith(logOpts).should.be.true;
+    this.eventFetcher._web3.eth.getPastLogs.calledWith(callArgs).should.be.true;
   });
 
   it('should get a block', async function () {
