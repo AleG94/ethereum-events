@@ -14,18 +14,19 @@ chai.use(chaiAsPromised);
 
 describe('Event Fetcher', function () {
   const blockHash = event.blockHash;
-  const contracts = [{ name: event.contract, address: event.to, abi: abi }];
-  const addresses = contracts.map(e => e.address);
+  const fromBlock = event.blockNumber - 1;
+  const toBlock = event.blockNumber;
+  const contract = { name: event.contract, address: event.to, abi: abi };
 
   beforeEach(function () {
-    const web3 = {
+    this.web3 = {
       eth: {
         getBlock: sinon.stub().withArgs(blockHash).resolves(block),
         getPastLogs: sinon.stub().resolves([log])
       }
     };
 
-    this.eventFetcher = new EventFetcher(web3, contracts);
+    this.eventFetcher = new EventFetcher(this.web3, [contract]);
   });
 
   afterEach(function () {
@@ -33,14 +34,12 @@ describe('Event Fetcher', function () {
   });
 
   it('should get events', async function () {
-    const fromBlock = event.blockNumber - 1;
-    const toBlock = event.blockNumber;
     const events = await this.eventFetcher.getEvents(fromBlock, toBlock);
 
     events.should.have.length(1);
     events[0].should.be.deep.equal(event);
 
-    const logOpts = { address: addresses, fromBlock: fromBlock, toBlock: toBlock };
+    const logOpts = { address: [contract.address], fromBlock: fromBlock, toBlock: toBlock };
 
     this.eventFetcher._web3.eth.getPastLogs.calledWith(logOpts).should.be.true;
   });
