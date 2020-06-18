@@ -74,4 +74,31 @@ describe('Event Fetcher', function () {
       this.eventFetcher._web3.eth.getBlock.called.should.be.false;
     });
   });
+
+  context('events filter', function () {
+    it('should get all events if filter is not provided', async function () {
+      const eventFetcher = new EventFetcher(this.web3, [contract]);
+      const events = await eventFetcher.getEvents(fromBlock, toBlock);
+
+      events.should.have.length(1);
+      events[0].should.be.deep.equal(event);
+    });
+
+    it('should get selected events if filter is provided', async function () {
+      const contractWithFilters = { ...contract, events: [event.event] };
+      const eventFetcher = new EventFetcher(this.web3, [contractWithFilters]);
+      const events = await eventFetcher.getEvents(fromBlock, toBlock);
+
+      events.should.have.length(1);
+      events[0].should.be.deep.equal(event);
+    });
+
+    it('should get no events if none of them matches the filter', async function () {
+      const contractWithFilters = { ...contract, events: ['RandomEvent'] };
+      const eventFetcher = new EventFetcher(this.web3, [contractWithFilters]);
+      const events = await eventFetcher.getEvents(fromBlock, toBlock);
+
+      events.should.have.length(0);
+    });
+  });
 });
