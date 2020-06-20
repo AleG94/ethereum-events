@@ -24,16 +24,14 @@ describe('Ethereum Events', function () {
     this.ethereumEvents._polling.start.called.should.be.true;
   });
 
-  it('should emit a new block', function (done) {
+  it('should emit a new block', function () {
     const block = { number: 2, status: 'confirmed', events: [{ name: 'Event' }] };
+    const blockCb = sinon.stub();
 
-    this.ethereumEvents.on('block.confirmed', (blockNumber, events) => {
-      blockNumber.should.be.equal(block.number);
-      events.should.be.deep.equal(block.events);
-      done();
-    });
-
+    this.ethereumEvents.on('block.confirmed', blockCb);
     this.ethereumEvents._polling._emitter.emit('block', block);
+
+    blockCb.calledWith(block.number, block.events).should.be.true;
   });
 
   it('should not emit a new block with the same status if done callback is not called', function () {
