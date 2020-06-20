@@ -94,10 +94,8 @@ describe('Ethereum Events', function () {
   });
 
   it('should emit a new block with different status even if done callback is not called', function () {
-    const blocks = [
-      { number: 2, status: BlockStatus.CONFIRMED, events: [{ name: 'Event' }] },
-      { number: 3, status: BlockStatus.UNCONFIRMED, events: [{ name: 'AnotherEvent' }] }
-    ];
+    const confirmedBlock = { number: 2, status: BlockStatus.CONFIRMED, events: [{ name: 'Event' }] };
+    const unconfirmedBlock = { number: 3, status: BlockStatus.UNCONFIRMED, events: [{ name: 'AnotherEvent' }] };
 
     const confirmedBlockCb = sinon.stub();
     const unconfirmedBlockCb = sinon.stub();
@@ -105,12 +103,13 @@ describe('Ethereum Events', function () {
     this.ethereumEvents.on('block.' + BlockStatus.CONFIRMED, confirmedBlockCb);
     this.ethereumEvents.on('block.' + BlockStatus.UNCONFIRMED, unconfirmedBlockCb);
 
-    for (const block of blocks) {
-      this.ethereumEvents._polling._emitter.emit('block', block);
-    }
+    this.ethereumEvents._polling._emitter.emit('block', confirmedBlock);
+    this.ethereumEvents._polling._emitter.emit('block', unconfirmedBlock);
 
     confirmedBlockCb.callCount.should.be.equal(1);
+    confirmedBlockCb.calledWith(confirmedBlock.number, confirmedBlock.events).should.be.true;
     unconfirmedBlockCb.callCount.should.be.equal(1);
+    unconfirmedBlockCb.calledWith(unconfirmedBlock.number, unconfirmedBlock.events).should.be.true;
   });
 
   it('should emit an error', function () {
