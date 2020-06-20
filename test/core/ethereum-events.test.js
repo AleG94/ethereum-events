@@ -110,6 +110,16 @@ describe('Ethereum Events', function () {
     unconfirmedBlockCb.callCount.should.be.equal(1);
   });
 
+  it('should emit an error', function () {
+    const error = new Error();
+    const blockCb = sinon.stub();
+
+    this.ethereumEvents.on('error', blockCb);
+    this.ethereumEvents._polling._emitter.emit('error', error);
+
+    blockCb.calledWith(error).should.be.true;
+  });
+
   it('should stop listening', function () {
     sinon.stub(this.ethereumEvents._polling, 'stop');
 

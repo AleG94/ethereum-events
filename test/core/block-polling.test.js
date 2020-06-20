@@ -163,44 +163,46 @@ describe('Block Polling', function () {
     this.polling._poll.secondCall.calledWith(latestConfirmedBlock + 1).should.be.true;
   });
 
-  it('should backoff, log and restart polling from the same block if an unknown error occurs', async function () {
+  it('should backoff, emit error and restart from the same block if an unknown error occurs', async function () {
     this.polling._running = true;
 
     const error = new Error();
+    const errorCb = sinon.stub();
 
-    sinon.stub(console, 'error');
     sinon.stub(this.polling._eventFetcher, 'getEvents').rejects(error);
     sinon.stub(this.polling, '_poll')
       .onSecondCall().resolves()
       .callThrough();
 
+    this.polling.on('error', errorCb);
+
     await this.polling._poll(startBlock);
 
     this.clock.tick(backoff);
 
+    errorCb.calledWith(error).should.be.true;
     this.polling._poll.secondCall.calledWith(startBlock);
-
-    console.error.calledWith(error).should.be.true;
   });
 
-  it('should backoff and restart polling from the same block if BlockNotFound error occurs', async function () {
+  it('should backoff and restart from the same block if BlockNotFound error occurs', async function () {
     this.polling._running = true;
 
     const error = new BlockNotFoundError();
+    const errorCb = sinon.stub();
 
-    sinon.stub(console, 'error');
     sinon.stub(this.polling._eventFetcher, 'getEvents').rejects(error);
     sinon.stub(this.polling, '_poll')
       .onSecondCall().resolves()
       .callThrough();
 
+    this.polling.on('error', errorCb);
+
     await this.polling._poll(startBlock);
 
     this.clock.tick(backoff);
 
+    errorCb.called.should.be.false;
     this.polling._poll.secondCall.calledWith(startBlock);
-
-    console.error.calledWith(error).should.be.false;
   });
 
   it('should stop polling', async function () {
