@@ -115,8 +115,8 @@ describe('Block Polling', function () {
 
   context('blocks', function () {
     it('should get block status', function () {
-      this.polling._getBlockStatus(20, 20).should.be.equal(BlockStatus.CONFIRMED);
-      this.polling._getBlockStatus(20, 20 - 1).should.be.equal(BlockStatus.UNCONFIRMED);
+      this.polling._getBlockStatus(latestBlock - confirmations, latestBlock).should.be.equal(BlockStatus.CONFIRMED);
+      this.polling._getBlockStatus(latestBlock - 1, latestBlock).should.be.equal(BlockStatus.UNCONFIRMED);
     });
 
     it('should emit a confirmed block', function () {
