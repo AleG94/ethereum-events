@@ -21,8 +21,10 @@ describe('Ethereum Events', function () {
   it('should start listening', function () {
     sinon.stub(this.ethereumEvents._polling, 'start');
 
-    this.ethereumEvents.start();
-    this.ethereumEvents._polling.start.called.should.be.true;
+    const startBlock = 20;
+
+    this.ethereumEvents.start(startBlock);
+    this.ethereumEvents._polling.start.calledWith(startBlock).should.be.true;
   });
 
   context('when not running', function () {

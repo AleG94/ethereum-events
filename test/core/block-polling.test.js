@@ -26,7 +26,6 @@ describe('Block Polling', function () {
 
     const contracts = [];
     const options = {
-      startBlock: startBlock,
       chunkSize: chunkSize,
       confirmations: confirmations,
       pollInterval: pollInterval,
@@ -44,7 +43,7 @@ describe('Block Polling', function () {
   it('should start polling', function () {
     sinon.stub(this.polling, '_poll');
 
-    this.polling.start();
+    this.polling.start(startBlock);
 
     this.polling._running.should.be.true;
     this.polling._poll.calledWith(startBlock).should.be.true;
