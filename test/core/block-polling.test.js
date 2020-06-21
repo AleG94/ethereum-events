@@ -100,17 +100,9 @@ describe('Block Polling', function () {
   });
 
   it('should stop polling', async function () {
-    const block = { number: event.blockNumber, status: BlockStatus.UNCONFIRMED, events: events };
-    const blockCb = sinon.stub();
-
-    this.polling.on('block', blockCb);
     this.polling.stop();
 
     this.polling._running.should.be.false;
-
-    this.polling._emitter.emit('block', block);
-
-    blockCb.called.should.be.false;
   });
 
   context('blocks', function () {
@@ -266,14 +258,14 @@ describe('Block Polling', function () {
     });
 
     it('should not restart polling if it was stopped', async function () {
-      this.polling._running = false;
-
       sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
       sinon.stub(this.polling, '_poll')
         .onSecondCall().resolves()
         .callThrough();
 
       const fromBlock = latestBlock - confirmations + 2;
+
+      this.polling.stop();
 
       await this.polling._poll(fromBlock);
 
