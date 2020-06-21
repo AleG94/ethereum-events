@@ -205,13 +205,16 @@ describe('Block Polling', function () {
   });
 
   context('restart', function () {
+    beforeEach(function () {
+      sinon.stub(this.polling, '_poll')
+        .onSecondCall().resolves()
+        .callThrough();
+    });
+
     it('should restart polling from the same block if it\'s still unconfirmed', async function () {
       this.polling._running = true;
 
       sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
-      sinon.stub(this.polling, '_poll')
-        .onSecondCall().resolves()
-        .callThrough();
 
       const fromBlock = latestBlock - confirmations + 2;
 
@@ -226,9 +229,6 @@ describe('Block Polling', function () {
       this.polling._running = true;
 
       sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
-      sinon.stub(this.polling, '_poll')
-        .onSecondCall().resolves()
-        .callThrough();
 
       const latestConfirmedBlock = latestBlock - confirmations;
       const fromBlock = latestConfirmedBlock - 1;
@@ -244,9 +244,6 @@ describe('Block Polling', function () {
       this.polling._running = true;
 
       sinon.stub(this.polling._eventFetcher, 'getEvents').rejects(new Error());
-      sinon.stub(this.polling, '_poll')
-        .onSecondCall().resolves()
-        .callThrough();
 
       this.polling.on('error', sinon.stub());
 
@@ -259,9 +256,6 @@ describe('Block Polling', function () {
 
     it('should not restart polling if it was stopped', async function () {
       sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
-      sinon.stub(this.polling, '_poll')
-        .onSecondCall().resolves()
-        .callThrough();
 
       const fromBlock = latestBlock - confirmations + 2;
 
