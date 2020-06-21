@@ -1,14 +1,15 @@
 'use strict';
 const chai = require('chai');
-const EthereumEvents = require('../lib/core/ethereum-events');
-const index = require('..');
+const EventListener = require('../lib/core/event-listener');
+const EthereumEvents = require('..');
 
 chai.should();
 
 describe('External API', function () {
-  it('should create an instance of EthereumEvents', function () {
+  it('should create an instance of EventListener', function () {
     const web3 = {}, contracts = [], options = {};
+    const ethereumEvents = EthereumEvents(web3, contracts, options);
 
-    index(web3, contracts, options).should.be.an.instanceOf(EthereumEvents);
+    ethereumEvents.should.be.an.instanceOf(EventListener);
   });
 });

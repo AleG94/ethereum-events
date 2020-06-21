@@ -4,11 +4,11 @@ const sinon = require('sinon');
 const EventEmitter = require('events');
 const BlockStatus = require('../../lib/util/block-status');
 const BlockPolling = require('../../lib/core/block-polling');
-const EthereumEvents = require('../../lib/core/ethereum-events');
+const EventListener = require('../../lib/core/event-listener');
 
 chai.should();
 
-describe('Ethereum Events', function () {
+describe('Event Listener', function () {
   beforeEach(function () {
     const emitter = new EventEmitter();
 
@@ -18,7 +18,7 @@ describe('Ethereum Events', function () {
 
     this.polling.emit = sinon.stub().callsFake(emitter.emit);
 
-    this.ethereumEvents = new EthereumEvents(this.polling);
+    this.eventListener = new EventListener(this.polling);
   });
 
   afterEach(function () {
@@ -28,7 +28,7 @@ describe('Ethereum Events', function () {
   it('should start listening', function () {
     const startBlock = 20;
 
-    this.ethereumEvents.start(startBlock);
+    this.eventListener.start(startBlock);
     this.polling.start.calledWith(startBlock).should.be.true;
   });
 
@@ -38,7 +38,7 @@ describe('Ethereum Events', function () {
       const block = { number: 2, status: status, events: [{ name: 'Event' }] };
       const blockCb = sinon.stub();
 
-      this.ethereumEvents.on('block.' + status, blockCb);
+      this.eventListener.on('block.' + status, blockCb);
       this.polling.emit('block', block);
 
       blockCb.called.should.be.false;
@@ -48,7 +48,7 @@ describe('Ethereum Events', function () {
       const error = new Error();
       const blockCb = sinon.stub();
 
-      this.ethereumEvents.on('error', blockCb);
+      this.eventListener.on('error', blockCb);
       this.polling.emit('error', error);
 
       blockCb.called.should.be.false;
@@ -57,7 +57,7 @@ describe('Ethereum Events', function () {
 
   context('when running', function () {
     beforeEach(function () {
-      this.ethereumEvents.start();
+      this.eventListener.start();
     });
 
     it('should emit a new block', function () {
@@ -65,7 +65,7 @@ describe('Ethereum Events', function () {
       const block = { number: 2, status: status, events: [{ name: 'Event' }] };
       const blockCb = sinon.stub();
 
-      this.ethereumEvents.on('block.' + status, blockCb);
+      this.eventListener.on('block.' + status, blockCb);
       this.polling.emit('block', block);
 
       blockCb.calledWith(block.number, block.events).should.be.true;
@@ -80,7 +80,7 @@ describe('Ethereum Events', function () {
 
       const blockCb = sinon.stub();
 
-      this.ethereumEvents.on('block.' + status, blockCb);
+      this.eventListener.on('block.' + status, blockCb);
 
       for (const block of blocks) {
         this.polling.emit('block', block);
@@ -99,7 +99,7 @@ describe('Ethereum Events', function () {
 
       const blockCb = sinon.stub().onFirstCall().callsArgWith(2, 'Error');
 
-      this.ethereumEvents.on('block.' + status, blockCb);
+      this.eventListener.on('block.' + status, blockCb);
 
       for (const block of blocks) {
         this.polling.emit('block', block);
@@ -119,7 +119,7 @@ describe('Ethereum Events', function () {
 
       const blockCb = sinon.stub().callsArg(2);
 
-      this.ethereumEvents.on('block.' + status, blockCb);
+      this.eventListener.on('block.' + status, blockCb);
 
       for (const block of blocks) {
         this.polling.emit('block', block);
@@ -135,8 +135,8 @@ describe('Ethereum Events', function () {
       const confirmedBlockCb = sinon.stub();
       const unconfirmedBlockCb = sinon.stub();
 
-      this.ethereumEvents.on('block.' + BlockStatus.CONFIRMED, confirmedBlockCb);
-      this.ethereumEvents.on('block.' + BlockStatus.UNCONFIRMED, unconfirmedBlockCb);
+      this.eventListener.on('block.' + BlockStatus.CONFIRMED, confirmedBlockCb);
+      this.eventListener.on('block.' + BlockStatus.UNCONFIRMED, unconfirmedBlockCb);
 
       this.polling.emit('block', confirmedBlock);
       this.polling.emit('block', unconfirmedBlock);
@@ -151,7 +151,7 @@ describe('Ethereum Events', function () {
       const error = new Error();
       const blockCb = sinon.stub();
 
-      this.ethereumEvents.on('error', blockCb);
+      this.eventListener.on('error', blockCb);
       this.polling.emit('error', error);
 
       blockCb.calledWith(error).should.be.true;
@@ -162,8 +162,8 @@ describe('Ethereum Events', function () {
       const block = { number: 2, status: status, events: [{ name: 'Event' }] };
       const blockCb = sinon.stub();
 
-      this.ethereumEvents.on('block.' + status, blockCb);
-      this.ethereumEvents.stop();
+      this.eventListener.on('block.' + status, blockCb);
+      this.eventListener.stop();
       this.polling.emit('block', block);
 
       blockCb.called.should.be.false;
