@@ -1,17 +1,24 @@
 'use strict';
 const chai = require('chai');
 const sinon = require('sinon');
+const EventEmitter = require('events');
 const BlockStatus = require('../../lib/util/block-status');
+const BlockPolling = require('../../lib/core/block-polling');
 const EthereumEvents = require('../../lib/core/ethereum-events');
 
 chai.should();
 
 describe('Ethereum Events', function () {
   beforeEach(function () {
-    const web3 = sinon.stub();
-    const contracts = [];
+    const emitter = new EventEmitter();
 
-    this.ethereumEvents = new EthereumEvents(web3, contracts);
+    this.polling = sinon.createStubInstance(BlockPolling, {
+      on: sinon.stub().callsFake(emitter.on)
+    });
+
+    this.polling.emit = sinon.stub().callsFake(emitter.emit);
+
+    this.ethereumEvents = new EthereumEvents(this.polling);
   });
 
   afterEach(function () {
@@ -19,12 +26,10 @@ describe('Ethereum Events', function () {
   });
 
   it('should start listening', function () {
-    sinon.stub(this.ethereumEvents._polling, 'start');
-
     const startBlock = 20;
 
     this.ethereumEvents.start(startBlock);
-    this.ethereumEvents._polling.start.calledWith(startBlock).should.be.true;
+    this.polling.start.calledWith(startBlock).should.be.true;
   });
 
   context('when not running', function () {
@@ -34,7 +39,7 @@ describe('Ethereum Events', function () {
       const blockCb = sinon.stub();
 
       this.ethereumEvents.on('block.' + status, blockCb);
-      this.ethereumEvents._polling._emitter.emit('block', block);
+      this.polling.emit('block', block);
 
       blockCb.called.should.be.false;
     });
@@ -44,7 +49,7 @@ describe('Ethereum Events', function () {
       const blockCb = sinon.stub();
 
       this.ethereumEvents.on('error', blockCb);
-      this.ethereumEvents._polling._emitter.emit('error', error);
+      this.polling.emit('error', error);
 
       blockCb.called.should.be.false;
     });
@@ -52,8 +57,6 @@ describe('Ethereum Events', function () {
 
   context('when running', function () {
     beforeEach(function () {
-      sinon.stub(this.ethereumEvents._polling, 'start');
-
       this.ethereumEvents.start();
     });
 
@@ -63,7 +66,7 @@ describe('Ethereum Events', function () {
       const blockCb = sinon.stub();
 
       this.ethereumEvents.on('block.' + status, blockCb);
-      this.ethereumEvents._polling._emitter.emit('block', block);
+      this.polling.emit('block', block);
 
       blockCb.calledWith(block.number, block.events).should.be.true;
     });
@@ -80,7 +83,7 @@ describe('Ethereum Events', function () {
       this.ethereumEvents.on('block.' + status, blockCb);
 
       for (const block of blocks) {
-        this.ethereumEvents._polling._emitter.emit('block', block);
+        this.polling.emit('block', block);
       }
 
       blockCb.callCount.should.be.equal(1);
@@ -99,7 +102,7 @@ describe('Ethereum Events', function () {
       this.ethereumEvents.on('block.' + status, blockCb);
 
       for (const block of blocks) {
-        this.ethereumEvents._polling._emitter.emit('block', block);
+        this.polling.emit('block', block);
       }
 
       blockCb.callCount.should.be.equal(2);
@@ -119,7 +122,7 @@ describe('Ethereum Events', function () {
       this.ethereumEvents.on('block.' + status, blockCb);
 
       for (const block of blocks) {
-        this.ethereumEvents._polling._emitter.emit('block', block);
+        this.polling.emit('block', block);
       }
 
       blockCb.callCount.should.be.equal(2);
@@ -135,8 +138,8 @@ describe('Ethereum Events', function () {
       this.ethereumEvents.on('block.' + BlockStatus.CONFIRMED, confirmedBlockCb);
       this.ethereumEvents.on('block.' + BlockStatus.UNCONFIRMED, unconfirmedBlockCb);
 
-      this.ethereumEvents._polling._emitter.emit('block', confirmedBlock);
-      this.ethereumEvents._polling._emitter.emit('block', unconfirmedBlock);
+      this.polling.emit('block', confirmedBlock);
+      this.polling.emit('block', unconfirmedBlock);
 
       confirmedBlockCb.callCount.should.be.equal(1);
       confirmedBlockCb.calledWith(confirmedBlock.number, confirmedBlock.events).should.be.true;
@@ -149,24 +152,22 @@ describe('Ethereum Events', function () {
       const blockCb = sinon.stub();
 
       this.ethereumEvents.on('error', blockCb);
-      this.ethereumEvents._polling._emitter.emit('error', error);
+      this.polling.emit('error', error);
 
       blockCb.calledWith(error).should.be.true;
     });
 
     it('should stop listening', function () {
-      sinon.stub(this.ethereumEvents._polling, 'stop');
-
       const status = BlockStatus.CONFIRMED;
       const block = { number: 2, status: status, events: [{ name: 'Event' }] };
       const blockCb = sinon.stub();
 
       this.ethereumEvents.on('block.' + status, blockCb);
       this.ethereumEvents.stop();
-      this.ethereumEvents._polling._emitter.emit('block', block);
+      this.polling.emit('block', block);
 
       blockCb.called.should.be.false;
-      this.ethereumEvents._polling.stop.called.should.be.true;
+      this.polling.stop.called.should.be.true;
     });
   });
 });

@@ -1,6 +1,7 @@
 'use strict';
 const chai = require('chai');
 const sinon = require('sinon');
+const EventFetcher = require('../../lib/core/event-fetcher');
 const BlockPolling = require('../../lib/core/block-polling');
 const event = require('../fixtures/event.json');
 const BlockStatus = require('../../lib/util/block-status');
@@ -32,7 +33,8 @@ describe('Block Polling', function () {
       backoff: backoff
     };
 
-    this.polling = new BlockPolling(web3, contracts, options);
+    this.eventFetcher = new EventFetcher(web3, contracts, options);
+    this.polling = new BlockPolling(web3, this.eventFetcher, options);
     this.clock = sinon.useFakeTimers();
   });
 
@@ -50,52 +52,52 @@ describe('Block Polling', function () {
   });
 
   it('should poll from a specific block', async function () {
-    sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
 
     await this.polling._poll(startBlock);
 
-    this.polling._eventFetcher.getEvents.calledWith(startBlock, latestBlock).should.be.true;
+    this.eventFetcher.getEvents.calledWith(startBlock, latestBlock).should.be.true;
   });
 
   it('should poll from latest block if an initial block is not provided', async function () {
-    sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
 
     await this.polling._poll();
 
-    this.polling._eventFetcher.getEvents.calledWith(latestBlock, latestBlock).should.be.true;
+    this.eventFetcher.getEvents.calledWith(latestBlock, latestBlock).should.be.true;
   });
 
   it('should poll up to latest block if n° of blocks <= chunkSize', async function () {
-    sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
 
     const fromBlock = latestBlock - chunkSize + 1;
 
     await this.polling._poll(fromBlock);
 
-    this.polling._eventFetcher.getEvents.calledWith(fromBlock, latestBlock).should.be.true;
+    this.eventFetcher.getEvents.calledWith(fromBlock, latestBlock).should.be.true;
   });
 
   it('should poll a single chunk if n° of blocks > chunkSize', async function () {
-    sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
 
     const fromBlock = latestBlock - chunkSize * 2;
     const toBlock = fromBlock + chunkSize - 1;
 
     await this.polling._poll(fromBlock);
 
-    this.polling._eventFetcher.getEvents.calledWith(fromBlock, toBlock).should.be.true;
+    this.eventFetcher.getEvents.calledWith(fromBlock, toBlock).should.be.true;
   });
 
   it('should not look for events if there aren\'t any new blocks', async function () {
-    sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
 
     await this.polling._poll(startBlock);
 
-    this.polling._eventFetcher.getEvents.callCount.should.be.equal(1);
+    this.eventFetcher.getEvents.callCount.should.be.equal(1);
 
     await this.polling._poll(startBlock);
 
-    this.polling._eventFetcher.getEvents.callCount.should.be.equal(1);
+    this.eventFetcher.getEvents.callCount.should.be.equal(1);
   });
 
   it('should stop polling', async function () {
@@ -135,7 +137,7 @@ describe('Block Polling', function () {
     it('should emit multiple blocks', async function () {
       const block = { number: event.blockNumber, status: BlockStatus.UNCONFIRMED, events: events };
 
-      sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(block.events);
+      sinon.stub(this.eventFetcher, 'getEvents').resolves(block.events);
 
       const blockCount = latestBlock - startBlock + 1;
       const blockCb = sinon.stub();
@@ -213,7 +215,7 @@ describe('Block Polling', function () {
     it('should restart polling from the same block if it\'s still unconfirmed', async function () {
       this.polling._running = true;
 
-      sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+      sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
 
       const fromBlock = latestBlock - confirmations + 2;
 
@@ -227,7 +229,7 @@ describe('Block Polling', function () {
     it('should restart polling from the latestConfirmedQueriedBlock + 1 if fromBlock is confirmed', async function () {
       this.polling._running = true;
 
-      sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+      sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
 
       const latestConfirmedBlock = latestBlock - confirmations;
       const fromBlock = latestConfirmedBlock - 1;
@@ -242,7 +244,7 @@ describe('Block Polling', function () {
     it('should backoff and restart from the same block if an error occurs', async function () {
       this.polling._running = true;
 
-      sinon.stub(this.polling._eventFetcher, 'getEvents').rejects(new Error());
+      sinon.stub(this.eventFetcher, 'getEvents').rejects(new Error());
 
       this.polling.on('error', sinon.stub());
 
@@ -254,7 +256,7 @@ describe('Block Polling', function () {
     });
 
     it('should not restart polling if it was stopped', async function () {
-      sinon.stub(this.polling._eventFetcher, 'getEvents').resolves(events);
+      sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
 
       const fromBlock = latestBlock - confirmations + 2;
 
@@ -273,7 +275,7 @@ describe('Block Polling', function () {
       const error = new Error();
       const errorCb = sinon.stub();
 
-      sinon.stub(this.polling._eventFetcher, 'getEvents').rejects(error);
+      sinon.stub(this.eventFetcher, 'getEvents').rejects(error);
 
       this.polling.on('error', errorCb);
 
@@ -286,7 +288,7 @@ describe('Block Polling', function () {
       const error = new BlockNotFoundError();
       const errorCb = sinon.stub();
 
-      sinon.stub(this.polling._eventFetcher, 'getEvents').rejects(error);
+      sinon.stub(this.eventFetcher, 'getEvents').rejects(error);
 
       this.polling.on('error', errorCb);
 
