@@ -3,29 +3,18 @@ const chai = require('chai');
 const sinon = require('sinon');
 const EventFetcher = require('../../lib/core/event-fetcher');
 const BlockPolling = require('../../lib/core/block-polling');
-const event = require('../fixtures/event.json');
 const BlockStatus = require('../../lib/util/block-status');
 const { BlockNotFoundError } = require('../../lib/errors');
 
 chai.should();
 
 describe('Block Polling', function () {
-  const latestBlock = event.blockNumber;
-  const startBlock = event.blockNumber - 10;
   const chunkSize = 100;
   const confirmations = 12;
   const pollInterval = 5000;
   const backoff = 1000;
-  const events = [event];
 
   beforeEach(function () {
-    const web3 = {
-      eth: {
-        getBlockNumber: sinon.stub().resolves(latestBlock)
-      }
-    };
-
-    const contracts = [];
     const options = {
       chunkSize: chunkSize,
       confirmations: confirmations,
@@ -33,8 +22,14 @@ describe('Block Polling', function () {
       backoff: backoff
     };
 
-    this.eventFetcher = new EventFetcher(web3, contracts, options);
-    this.polling = new BlockPolling(web3, this.eventFetcher, options);
+    this.web3 = {
+      eth: {
+        getBlockNumber: sinon.stub()
+      }
+    };
+
+    this.eventFetcher = sinon.createStubInstance(EventFetcher);
+    this.polling = new BlockPolling(this.web3, this.eventFetcher, options);
     this.clock = sinon.useFakeTimers();
   });
 
@@ -42,244 +37,310 @@ describe('Block Polling', function () {
     sinon.restore();
   });
 
-  it('should start polling', function () {
-    sinon.stub(this.polling, '_poll');
+  it('should start polling from a specific block', async function () {
+    const startBlock = 20;
+    const latestBlock = 50;
+
+    this.eventFetcher.getEvents.resolves([]);
+    this.web3.eth.getBlockNumber.resolves(latestBlock);
 
     this.polling.start(startBlock);
 
     this.polling._running.should.be.true;
-    this.polling._poll.calledWith(startBlock).should.be.true;
-  });
 
-  it('should poll from a specific block', async function () {
-    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
-
-    await this.polling._poll(startBlock);
+    await this.clock.tickAsync();
 
     this.eventFetcher.getEvents.calledWith(startBlock, latestBlock).should.be.true;
   });
 
-  it('should poll from latest block if an initial block is not provided', async function () {
-    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
+  it('should start polling from latest block if an initial block is not provided', async function () {
+    const latestBlock = 50;
 
-    await this.polling._poll();
+    this.eventFetcher.getEvents.resolves([]);
+    this.web3.eth.getBlockNumber.resolves(latestBlock);
+
+    this.polling.start();
+
+    this.polling._running.should.be.true;
+
+    await this.clock.tickAsync();
 
     this.eventFetcher.getEvents.calledWith(latestBlock, latestBlock).should.be.true;
   });
 
   it('should poll up to latest block if n° of blocks <= chunkSize', async function () {
-    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
+    const latestBlock = chunkSize * 5;
+    const startBlock = latestBlock - chunkSize + 1;
 
-    const fromBlock = latestBlock - chunkSize + 1;
+    this.eventFetcher.getEvents.resolves([]);
+    this.web3.eth.getBlockNumber.resolves(latestBlock);
 
-    await this.polling._poll(fromBlock);
+    this.polling.start(startBlock);
 
-    this.eventFetcher.getEvents.calledWith(fromBlock, latestBlock).should.be.true;
+    await this.clock.tickAsync();
+
+    this.eventFetcher.getEvents.calledWith(startBlock, latestBlock).should.be.true;
   });
 
   it('should poll a single chunk if n° of blocks > chunkSize', async function () {
-    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
+    const latestBlock = chunkSize * 5;
+    const startBlock = latestBlock - chunkSize * 2;
+    const toBlock = startBlock + chunkSize - 1;
 
-    const fromBlock = latestBlock - chunkSize * 2;
-    const toBlock = fromBlock + chunkSize - 1;
+    this.eventFetcher.getEvents.resolves([]);
+    this.web3.eth.getBlockNumber.resolves(latestBlock);
 
-    await this.polling._poll(fromBlock);
+    this.polling.start(startBlock);
 
-    this.eventFetcher.getEvents.calledWith(fromBlock, toBlock).should.be.true;
+    await this.clock.tickAsync();
+
+    this.eventFetcher.getEvents.calledWith(startBlock, toBlock).should.be.true;
   });
 
   it('should not look for events if there aren\'t any new blocks', async function () {
-    sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
+    const latestBlock = 50;
 
-    await this.polling._poll(startBlock);
+    this.eventFetcher.getEvents.resolves([]);
+    this.web3.eth.getBlockNumber.resolves(latestBlock);
 
-    this.eventFetcher.getEvents.callCount.should.be.equal(1);
+    this.polling.start();
 
-    await this.polling._poll(startBlock);
+    await this.clock.nextAsync();
 
     this.eventFetcher.getEvents.callCount.should.be.equal(1);
   });
 
-  it('should stop polling', async function () {
+  it('should stop polling', function () {
+    this.polling.start();
     this.polling.stop();
 
     this.polling._running.should.be.false;
   });
 
   context('blocks', function () {
-    it('should get block status', function () {
-      this.polling._getBlockStatus(latestBlock - confirmations, latestBlock).should.be.equal(BlockStatus.CONFIRMED);
-      this.polling._getBlockStatus(latestBlock - 1, latestBlock).should.be.equal(BlockStatus.UNCONFIRMED);
-    });
+    it('should emit an unconfirmed block', async function () {
+      const latestBlock = 50;
+      const blockNumber = latestBlock;
+      const events = [{ name: 'Event', blockNumber: blockNumber }];
+      const block = { number: blockNumber, status: BlockStatus.UNCONFIRMED, events: events };
 
-    it('should emit a confirmed block', function () {
-      const block = { number: event.blockNumber, status: BlockStatus.CONFIRMED, events: events };
+      this.eventFetcher.getEvents.resolves(events);
+      this.web3.eth.getBlockNumber.resolves(latestBlock);
+
       const blockCb = sinon.stub();
 
       this.polling.on('block', blockCb);
-      this.polling._notify(block.number, block.status, block.events);
+      this.polling.start(blockNumber);
 
-      blockCb.callCount.should.be.equal(1);
+      await this.clock.tickAsync();
+
       blockCb.calledWith(block).should.be.true;
     });
 
-    it('should emit an unconfirmed block', function () {
-      const block = { number: event.blockNumber, status: BlockStatus.UNCONFIRMED, events: events };
+    it('should emit a confirmed block', async function () {
+      const latestBlock = 50;
+      const blockNumber = latestBlock - confirmations;
+      const events = [{ name: 'Event', blockNumber: blockNumber }];
+      const block = { number: blockNumber, status: BlockStatus.CONFIRMED, events: events };
+
+      this.eventFetcher.getEvents.resolves(events);
+      this.web3.eth.getBlockNumber.resolves(latestBlock);
+
       const blockCb = sinon.stub();
 
       this.polling.on('block', blockCb);
-      this.polling._notify(block.number, block.status, block.events);
+      this.polling.start(blockNumber);
 
-      blockCb.callCount.should.be.equal(1);
+      await this.clock.tickAsync();
+
       blockCb.calledWith(block).should.be.true;
     });
 
     it('should emit multiple blocks', async function () {
-      const block = { number: event.blockNumber, status: BlockStatus.UNCONFIRMED, events: events };
+      const latestBlock = 50;
+      const blockNumber = latestBlock - confirmations;
+      const startBlock = blockNumber;
+      const events = [{ name: 'Event', blockNumber: blockNumber }];
+      const block = { number: blockNumber, status: BlockStatus.CONFIRMED, events: events };
 
-      sinon.stub(this.eventFetcher, 'getEvents').resolves(block.events);
+      this.eventFetcher.getEvents.resolves(events);
+      this.web3.eth.getBlockNumber.resolves(latestBlock);
 
       const blockCount = latestBlock - startBlock + 1;
       const blockCb = sinon.stub();
 
       this.polling.on('block', blockCb);
+      this.polling.start(startBlock);
 
-      await this.polling._poll(startBlock);
+      await this.clock.tickAsync();
 
       blockCb.callCount.should.be.equal(blockCount);
       blockCb.calledWith(block).should.be.true;
 
-      const blocksWithEmptyEvents = Array.from(Array(blockCount), (e, i) => i + startBlock)
-        .filter(e => e !== block.number);
+      const otherBlocks = Array.from(Array(blockCount), (e, i) => i + startBlock)
+        .filter(e => e !== block.number)
+        .map(e => ({ number: e, status: BlockStatus.UNCONFIRMED, events: [] }));
 
-      for (const blockNumber of blocksWithEmptyEvents) {
-        const emptyBlock = {
-          number: blockNumber,
-          status: this.polling._getBlockStatus(blockNumber, latestBlock - confirmations),
-          events: []
-        };
-
-        blockCb.calledWith(emptyBlock).should.be.true;
+      for (const otherBlock of otherBlocks) {
+        blockCb.calledWith(otherBlock).should.be.true;
       }
     });
 
     context('after emitting an unconfirmed block', function () {
-      const block = { number: event.blockNumber, status: BlockStatus.UNCONFIRMED, events: events };
+      const blockNumber = 20;
+      const events = [{ name: 'Event', blockNumber: blockNumber }];
+      const block = { number: blockNumber, status: BlockStatus.UNCONFIRMED, events: events };
 
       beforeEach(function () {
-        this.polling._notify(block.number, block.status, block.events);
+        this.eventFetcher.getEvents.onFirstCall().resolves(events);
+        this.web3.eth.getBlockNumber.onFirstCall().resolves(blockNumber);
       });
 
-      it('should not emit the block again if it\'s still unconfirmed and events did not change', function () {
+      it('should not emit the block again if it\'s still unconfirmed and events did not change', async function () {
+        const latestBlock = blockNumber + 1;
+
+        this.eventFetcher.getEvents.resolves(events);
+        this.web3.eth.getBlockNumber.resolves(latestBlock);
+
         const blockCb = sinon.stub();
 
         this.polling.on('block', blockCb);
-        this.polling._notify(block.number, block.status, block.events);
+        this.polling.start(blockNumber);
 
-        blockCb.callCount.should.be.equal(0);
+        await this.clock.nextAsync();
+
+        blockCb.withArgs(block).calledOnce.should.be.true;
       });
 
-      it('should emit the block again if it\'s still unconfirmed but events changed', function () {
-        const newEvents = [{ name: 'NewEvent' }];
+      it('should emit the block again if it\'s still unconfirmed but events changed', async function () {
+        const latestBlock = blockNumber + 1;
+        const newEvents = [{ name: 'NewEvent', blockNumber: blockNumber }];
         const blockWithNewEvents = { ...block, events: newEvents };
+
+        this.eventFetcher.getEvents.resolves(newEvents);
+        this.web3.eth.getBlockNumber.resolves(latestBlock);
+
         const blockCb = sinon.stub();
 
         this.polling.on('block', blockCb);
-        this.polling._notify(block.number, block.status, newEvents);
+        this.polling.start(blockNumber);
 
-        blockCb.callCount.should.be.equal(1);
-        blockCb.calledWith(blockWithNewEvents).should.be.true;
+        await this.clock.nextAsync();
+
+        blockCb.withArgs(block).calledOnce.should.be.true;
+        blockCb.withArgs(blockWithNewEvents).calledOnce.should.be.true;
       });
 
-      it('should emit the block again if its status changed to confirmed', function () {
-        const status = BlockStatus.CONFIRMED;
-        const blockWithNewStatus = { ...block, status: status };
+      it('should emit the block again if its status changed to confirmed', async function () {
+        const latestBlock = blockNumber + confirmations;
+        const blockWithNewStatus = { ...block, status: BlockStatus.CONFIRMED };
         const blockCb = sinon.stub();
 
-        this.polling.on('block', blockCb);
-        this.polling._notify(block.number, status, block.events);
+        this.eventFetcher.getEvents.resolves(events);
+        this.web3.eth.getBlockNumber.resolves(latestBlock);
 
-        blockCb.callCount.should.be.equal(1);
-        blockCb.calledWith(blockWithNewStatus).should.be.true;
+        this.polling.on('block', blockCb);
+        this.polling.start(blockNumber);
+
+        await this.clock.nextAsync();
+
+        blockCb.withArgs(block).calledOnce.should.be.true;
+        blockCb.withArgs(blockWithNewStatus).calledOnce.should.be.true;
       });
     });
   });
 
   context('restart', function () {
-    beforeEach(function () {
-      sinon.stub(this.polling, '_poll')
-        .onSecondCall().resolves()
-        .callThrough();
-    });
-
     it('should restart polling from the same block if it\'s still unconfirmed', async function () {
-      this.polling._running = true;
+      const latestBlockOnFirstCall = 49;
+      const latestBlockOnSecondCall = 50;
+      const startBlock = latestBlockOnFirstCall - confirmations + 1;
 
-      sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
+      this.eventFetcher.getEvents.resolves([]);
+      this.web3.eth.getBlockNumber
+        .onFirstCall().resolves(latestBlockOnFirstCall)
+        .onSecondCall().resolves(latestBlockOnSecondCall);
 
-      const fromBlock = latestBlock - confirmations + 2;
+      this.polling.start(startBlock);
 
-      await this.polling._poll(fromBlock);
+      await this.clock.nextAsync(pollInterval);
 
-      this.clock.tick(pollInterval);
-
-      this.polling._poll.secondCall.calledWith(fromBlock).should.be.true;
+      this.eventFetcher.getEvents.firstCall.calledWith(startBlock, latestBlockOnFirstCall).should.be.true;
+      this.eventFetcher.getEvents.secondCall.calledWith(startBlock, latestBlockOnSecondCall).should.be.true;
     });
 
     it('should restart polling from the latestConfirmedQueriedBlock + 1 if fromBlock is confirmed', async function () {
-      this.polling._running = true;
+      const latestBlockOnFirstCall = 49;
+      const latestBlockOnSecondCall = 50;
+      const latestConfirmedQueriedBlockOnFirstCall = latestBlockOnFirstCall - confirmations;
+      const startBlock = latestConfirmedQueriedBlockOnFirstCall - 1;
 
-      sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
+      this.eventFetcher.getEvents.resolves([]);
+      this.web3.eth.getBlockNumber
+        .onFirstCall().resolves(latestBlockOnFirstCall)
+        .onSecondCall().resolves(latestBlockOnSecondCall);
 
-      const latestConfirmedBlock = latestBlock - confirmations;
-      const fromBlock = latestConfirmedBlock - 1;
+      this.polling.start(startBlock);
 
-      await this.polling._poll(fromBlock);
+      await this.clock.nextAsync(pollInterval);
 
-      this.clock.tick(pollInterval);
-
-      this.polling._poll.secondCall.calledWith(latestConfirmedBlock + 1).should.be.true;
+      this.eventFetcher.getEvents.firstCall.calledWith(startBlock, latestBlockOnFirstCall).should.be.true;
+      this.eventFetcher.getEvents.secondCall
+        .calledWith(latestConfirmedQueriedBlockOnFirstCall + 1, latestBlockOnSecondCall).should.be.true;
     });
 
-    it('should backoff and restart from the same block if an error occurs', async function () {
-      this.polling._running = true;
+    it('should restart from the same block if an error occurs', async function () {
+      const latestBlock = 50;
+      const startBlock = latestBlock - confirmations;
 
-      sinon.stub(this.eventFetcher, 'getEvents').rejects(new Error());
+      this.eventFetcher.getEvents.rejects(new Error());
+      this.web3.eth.getBlockNumber.resolves(latestBlock);
 
       this.polling.on('error', sinon.stub());
+      this.polling.start(startBlock);
 
-      await this.polling._poll(startBlock);
+      await this.clock.nextAsync(pollInterval);
 
-      this.clock.tick(backoff);
-
-      this.polling._poll.secondCall.calledWith(startBlock);
+      this.eventFetcher.getEvents.firstCall.calledWith(startBlock, latestBlock).should.be.true;
+      this.eventFetcher.getEvents.secondCall.calledWith(startBlock, latestBlock).should.be.true;
     });
 
     it('should not restart polling if it was stopped', async function () {
-      sinon.stub(this.eventFetcher, 'getEvents').resolves(events);
+      const latestBlockOnFirstCall = 49;
+      const latestBlockOnSecondCall = 50;
+      const startBlock = latestBlockOnFirstCall - confirmations;
 
-      const fromBlock = latestBlock - confirmations + 2;
+      this.eventFetcher.getEvents.resolves([]);
+      this.web3.eth.getBlockNumber
+        .onFirstCall().resolves(latestBlockOnFirstCall)
+        .onSecondCall().resolves(latestBlockOnSecondCall);
 
+      this.polling.start(startBlock);
       this.polling.stop();
 
-      await this.polling._poll(fromBlock);
+      await this.clock.nextAsync();
 
-      this.clock.tick(pollInterval);
-
-      this.polling._poll.callCount.should.be.equal(1);
+      this.eventFetcher.getEvents.calledOnce.should.be.true;
     });
   });
 
   context('errors', function () {
+    beforeEach(function () {
+      const latestBlock = 50;
+
+      this.web3.eth.getBlockNumber.resolves(latestBlock);
+    });
+
     it('should emit an error if an unknown error occurs', async function () {
       const error = new Error();
       const errorCb = sinon.stub();
 
-      sinon.stub(this.eventFetcher, 'getEvents').rejects(error);
+      this.eventFetcher.getEvents.rejects(error);
 
       this.polling.on('error', errorCb);
+      this.polling.start();
 
-      await this.polling._poll(startBlock);
+      await this.clock.tickAsync();
 
       errorCb.calledWith(error).should.be.true;
     });
@@ -288,11 +349,12 @@ describe('Block Polling', function () {
       const error = new BlockNotFoundError();
       const errorCb = sinon.stub();
 
-      sinon.stub(this.eventFetcher, 'getEvents').rejects(error);
+      this.eventFetcher.getEvents.rejects(error);
 
       this.polling.on('error', errorCb);
+      this.polling.start();
 
-      await this.polling._poll(startBlock);
+      await this.clock.tickAsync();
 
       errorCb.called.should.be.false;
     });

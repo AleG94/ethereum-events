@@ -41,37 +41,30 @@ describe('Event Fetcher', function () {
 
     const callArgs = { address: [contract.address], fromBlock: fromBlock, toBlock: toBlock };
 
-    this.eventFetcher._web3.eth.getPastLogs.calledWith(callArgs).should.be.true;
-  });
-
-  it('should get a block', async function () {
-    const blocks = await this.eventFetcher._getBlocks([blockHash]);
-
-    blocks[blockHash].should.be.deep.equal(block);
-
-    this.eventFetcher._web3.eth.getBlock.called.should.be.true;
+    this.web3.eth.getPastLogs.calledWith(callArgs).should.be.true;
   });
 
   it('should throw an error if block is not available', function () {
-    this.eventFetcher._web3.eth.getBlock.resolves(null);
+    this.web3.eth.getBlock.resolves(null);
 
-    return this.eventFetcher._getBlocks([blockHash]).should.be.eventually.rejected
+    return this.eventFetcher.getEvents(fromBlock, toBlock).should.be.eventually.rejected
       .and.be.an.instanceOf(BlockNotFoundError);
   });
 
-  context('after getting a block', function () {
+  context('after getting events', function () {
     beforeEach(async function () {
-      await this.eventFetcher._getBlocks([blockHash]);
+      await this.eventFetcher.getEvents(fromBlock, toBlock);
     });
 
-    it('should find the block in cache when getting it again', async function () {
-      this.eventFetcher._web3.eth.getBlock.reset();
+    it('should not request a block again if it\'s already in cache', async function () {
+      this.web3.eth.getBlock.reset();
 
-      const blocks = await this.eventFetcher._getBlocks([blockHash]);
+      const events = await this.eventFetcher.getEvents(fromBlock, toBlock);
 
-      blocks[blockHash].should.be.deep.equal(block);
+      events.should.have.length(1);
+      events[0].should.be.deep.equal(event);
 
-      this.eventFetcher._web3.eth.getBlock.called.should.be.false;
+      this.web3.eth.getBlock.called.should.be.false;
     });
   });
 
