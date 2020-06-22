@@ -29,6 +29,8 @@ describe('Event Listener', function () {
     const startBlock = 20;
 
     this.eventListener.start(startBlock);
+
+    this.eventListener.isRunning().should.be.true;
     this.polling.start.calledWith(startBlock).should.be.true;
   });
 
@@ -158,15 +160,9 @@ describe('Event Listener', function () {
     });
 
     it('should stop listening', function () {
-      const status = BlockStatus.CONFIRMED;
-      const block = { number: 2, status: status, events: [{ name: 'Event' }] };
-      const blockCb = sinon.stub();
-
-      this.eventListener.on('block.' + status, blockCb);
       this.eventListener.stop();
-      this.polling.emit('block', block);
 
-      blockCb.called.should.be.false;
+      this.eventListener.isRunning().should.be.false;
       this.polling.stop.called.should.be.true;
     });
   });

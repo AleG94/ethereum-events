@@ -46,7 +46,7 @@ describe('Block Polling', function () {
 
     this.polling.start(startBlock);
 
-    this.polling._running.should.be.true;
+    this.polling.isRunning().should.be.true;
 
     await this.clock.tickAsync();
 
@@ -61,7 +61,7 @@ describe('Block Polling', function () {
 
     this.polling.start();
 
-    this.polling._running.should.be.true;
+    this.polling.isRunning().should.be.true;
 
     await this.clock.tickAsync();
 
@@ -114,7 +114,7 @@ describe('Block Polling', function () {
     this.polling.start();
     this.polling.stop();
 
-    this.polling._running.should.be.false;
+    this.polling.isRunning().should.be.false;
   });
 
   context('blocks', function () {
