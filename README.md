@@ -12,13 +12,23 @@ Receive real-time events from your contracts with minimal effort.
 
 ## Motivation
 
-Ethereum and blockchains in general can be quite challenging for new developers to approach.
-Most of the difficulty resides in understanding the many dynamics that can occur (e.g. finality, reorgs)
-and how to deal with them in order to provide quality UX.
+Ethereum, and blockchains in general, can be quite challenging for new developers to approach. Most of the difficulty resides in understanding the many dynamics that can occur (e.g. finality, reorgs) and how to deal with them to provide quality UX.
 
 A lot of Ethereum based dApps heavily depend on events fired by their smart contracts.
-This package is meant to simplify the process of listening for those events in real-time in a reliable 
-and efficient way, keeping away blockchain complexity as much as possible.
+This package is meant to simplify the process of listening for these real-time events in a reliable yet efficient way, keeping away blockchain complexity as much as possible.
+
+
+## How it works
+
+EthereumEvents continuously polls the Ethereum blockchain for new blocks. As soon as a new block is detected, the events contained inside it are immediately delivered for processing. 
+
+Since, in the blockchain environment, finality is probabilistic and increases with the number of subsequent blocks mined, blocks are delivered using two different channels: `confirmed` and `unconfirmed`.
+
+Unconfirmed blocks are newer blocks that can be subject to reorgs, so the events contained inside them may still change.
+
+Confirmed blocks, on the other hand, are older blocks that have reached a certain number of confirmations. It is relatively safe to assume that the events contained inside them are final and will not change.
+
+For the vast majority of use cases, the default value of 12 confirmations is considered safe but it can be adjusted to fit every need.
 
 
 ## Requirements
@@ -35,6 +45,8 @@ npm install ethereum-events
 
 ## Usage
 
+### Setup and instantiate
+
 ```js
 const Web3 = require('web3');
 const EthereumEvents = require('ethereum-events');
@@ -47,12 +59,12 @@ const contracts = [
     name: 'Token',
     address: '0xefE1e4e13F9ED8399eE8e258b3a1717b7D15f054',
     abi: ERC20_ABI,
-    events: ['Transfer'] // optional events filter (default: all events)
+    events: ['Transfer'] // optional event filter (default: all events)
   } 
 ];
 
 const options = {
-  pollInterval: 13000, // period between poll for new events in milliseconds (default: 13000)
+  pollInterval: 13000, // period between polls in milliseconds (default: 13000)
   confirmations: 12,   // n° of confirmation blocks (default: 12)
   chunkSize: 10000,    // n° of blocks to fetch at a time (default: 10000)
   concurrency: 10,     // maximum n° of concurrent web3 requests (default: 10)
@@ -62,44 +74,54 @@ const options = {
 const web3 = new Web3(WEB3_PROVIDER);
 
 const ethereumEvents = new EthereumEvents(web3, contracts, options);
+```
 
+### Register listeners
 
+```js
 ethereumEvents.on('block.confimed', (blockNumber, events, done) => {
 
-  // Events contained in blocks with 'confirmed' status are considered final,
-  // hence the callback will be fired only once for each blockNumber.
-  // Blocks are received in order and one at a time so you don't skip any
-  // and know for sure that you processed every block up to the latest received.
+  // Events contained in 'confirmed' blocks are considered final,
+  // hence the callback is fired only once for each blockNumber.
+  // Blocks are delivered in sequential order and one at a time so that none is skipped
+  // and you know for sure that every block up to the latest one received was processed.
   
-  // Remeber to call the 'done()' function after processing the events
-  // in order to receive the next block. If an error occurs, pass it to the done
-  // function as argument like so 'done(err)' to retry and not skip the block.
+  // Call 'done()' after processing the events in order to receive the next block. 
+  // If an error occurs, calling 'done(err)' will retry to deliver the same block
+  // without skipping it.
 
 });
 
 ethereumEvents.on('block.unconfimed', (blockNumber, events, done) => {
   
-  // Events contained in blocks with 'unconfirmed' status are NOT considered final
+  // Events contained in 'unconfirmed' blocks are NOT considered final
   // and may be subject to change, hence the callback may be fired multiple times
-  // for the same blockNumber if the events change.
-  // Blocks are received in order and one at a time.
+  // for the same blockNumber if the events contained inside that block change.
+  // Blocks are received one at a time but, due to reorgs, the order is not guaranteed.
   
-  // Remeber to call the 'done()' function after processing the events
-  // in order to receive the next block. If an error occurs, pass it to the done
-  // function as argument like so 'done(err)' to retry and not skip the block.
+  // Call 'done()' after processing the events in order to receive the next block. 
+  // If an error occurs, calling 'done(err)' will retry to deliver the same block
+  // without skipping it.
   
 });
 
 ethereumEvents.on('error', err => {
 
-  // An error occured while fetching new events.
-  // Retry will be attempted after backoff interval.
+  // An error occured while fetching new blocks/events.
+  // A retry will be attempted after backoff interval.
 
 });
 
-// Start listening for events
-ethereumEvents.start();
+```
 
+### Start listening
+
+```js
+const startBlock = 6596988;
+
+ethereumEvents.start(startBlock); // startBlock defaults to 'latest' when omitted
+
+ethereumEvents.isRunning() // true
 
 // Stop listening for events
 ethereumEvents.stop();
@@ -108,7 +130,7 @@ ethereumEvents.stop();
 
 ## Event Format
 
-```json
+```jsonc
 {
   "name": "Transfer",
   "contract": "Token",
@@ -117,8 +139,8 @@ ethereumEvents.stop();
   "blockNumber": 6596988,
   "transactionHash": "0x686943cee4035375b25209a2972535c93eefb688fad42d72e518c452387c69c9",
   "transactionIndex": 10,
-  "from": "0x5B848132d3a0111d4daB7060b6051961013C71c7",
-  "to": "0xefE1e4e13F9ED8399eE8e258b3a1717b7D15f054",
+  "from": "0x5B848132d3a0111d4daB7060b6051961013C71c7",  // sender of the transaction
+  "to": "0xefE1e4e13F9ED8399eE8e258b3a1717b7D15f054",    // receiver of the transaction
   "logIndex": 11,
   "values": {
     "from": "0x343c6A169D973bBF33A8F1535754A4745a3BD9C1",
@@ -131,11 +153,10 @@ ethereumEvents.stop();
 
 ## Notes
 
-The `chunkSize` option lets you customize how many blocks to query for events at a time. This is useful when the start block is far behind the current latest block and many blocks have to be fetched in order to get up to date.\
-Having a higher *chunkSize* is more performant but it may cause a failure in the calls to your provider if too many events are retreived in the same request so the optimal value heavily depends on how many events your contracts emit.
+The `chunkSize` option lets you customize how many blocks to query for events at a time. This is useful when the start block is far behind the current latest block and many blocks have to be fetched to get up to date.\
+Having a higher *chunkSize* is more performant but it may cause a failure in the calls to your provider if too many events are retrieved in the same request so the optimal value heavily depends on how many events your contracts emit.
 
-The `concurrency` option lets you customize how many concurrent requests can be sent to your web3 provider so that 
-you can avoid being rate limited.
+The `concurrency` option lets you customize how many concurrent requests can be made to your web3 provider so that you can avoid being rate limited.
 
 
 [circleci-image]: https://circleci.com/gh/AleG94/ethereum-events.svg?style=svg
