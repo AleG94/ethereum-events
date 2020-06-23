@@ -19,7 +19,9 @@
     "events",
     "listener",
     "solidity",
-    "logs"
+    "logs",
+    "contracts",
+    "web3"
   ],
   "author": "Alessandro Genovese",
   "license": "MIT",
