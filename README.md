@@ -79,7 +79,7 @@ const ethereumEvents = new EthereumEvents(web3, contracts, options);
 ### Register listeners
 
 ```js
-ethereumEvents.on('block.confimed', (blockNumber, events, done) => {
+ethereumEvents.on('block.confirmed', (blockNumber, events, done) => {
 
   // Events contained in 'confirmed' blocks are considered final,
   // hence the callback is fired only once for each blockNumber.
@@ -92,7 +92,7 @@ ethereumEvents.on('block.confimed', (blockNumber, events, done) => {
 
 });
 
-ethereumEvents.on('block.unconfimed', (blockNumber, events, done) => {
+ethereumEvents.on('block.unconfirmed', (blockNumber, events, done) => {
   
   // Events contained in 'unconfirmed' blocks are NOT considered final
   // and may be subject to change, hence the callback may be fired multiple times
