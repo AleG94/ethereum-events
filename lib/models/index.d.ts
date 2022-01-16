@@ -1,3 +1,5 @@
+declare type EventType = 'error' | 'block' | 'block.confirmed' | 'block.unconfirmed';
+
 declare interface EthereumEvent {
   name: string;
   contract: string;
@@ -11,4 +13,3 @@ declare interface EthereumEvent {
   logIndex: number;
   values: any;
 }
-export = EthereumEvent

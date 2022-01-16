@@ -15,7 +15,7 @@ declare class EventFetcher {
     _getBlocks(blockHashes: any): Promise<any[]>;
     */
 
-  getEvents(fromBlock: any, toBlock: any): Promise<any>;
+  getEvents(fromBlock: any, toBlock: any): Promise<EthereumEvent[]>;
 }
 
 export = EventFetcher;

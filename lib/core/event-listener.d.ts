@@ -17,10 +17,10 @@ declare class EventListener {
   stop(): void;
   isRunning(): boolean;
   on(
-    event: EthereumEvent,
+    event: EventType,
     callback: (
       blockNumber: BlockNumber,
-      events: Event,
+      events: EthereumEvent[],
       done: (err?: any) => void,
     ) => void,
   ): void;
