@@ -1,6 +1,6 @@
 declare type EventType = 'error' | 'block' | 'block.confirmed' | 'block.unconfirmed';
 
-declare interface EthereumEvent {
+declare interface EthereumEvent<T = any> {
   name: string;
   contract: string;
   timestamp: Date;
@@ -11,5 +11,5 @@ declare interface EthereumEvent {
   from: string;
   to: string;
   logIndex: number;
-  values: any;
+  values: T;
 }
