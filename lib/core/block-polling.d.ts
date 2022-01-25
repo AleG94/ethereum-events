@@ -1,5 +1,4 @@
 import EthereumEventsConfig = require('../../config');
-import EthereumEvent from '../models/ethereum-event';
 import Web3 from 'web3';
 import { BlockNumber } from 'web3-core';
 
@@ -29,7 +28,7 @@ declare class BlockPolling {
     event: EventType,
     callback: (
       blockNumber: BlockNumber,
-      events: EthereumEvent,
+      events: EthereumEvent[],
       done: (err?: any) => void,
     ) => void,
   ): void;
