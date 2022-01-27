@@ -1,4 +1,4 @@
-declare interface EthereumEventsConfig {
+export interface EthereumEventsConfig {
   /** period between polls in milliseconds (default: 13000) */
   pollInterval?: number;
   /** n° of confirmation blocks (default: 12) */
@@ -10,4 +10,3 @@ declare interface EthereumEventsConfig {
   /** retry back-off in milliseconds (default: 1000) */
   backoff?: number;
 }
-export = EthereumEventsConfig;

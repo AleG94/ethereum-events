@@ -1,7 +1,7 @@
-import EthereumEventsConfig = require('../../config');
+import { EthereumEventsConfig } from '../../config';
 import Web3 from 'web3';
 
-declare class EventFetcher {
+export class EventFetcher {
   constructor(web3: Web3, contracts: any, options?: EthereumEventsConfig);
   /** private
     _web3: any;
@@ -13,9 +13,7 @@ declare class EventFetcher {
     _filter(logs: any): any;
     _format(logs: any): Promise<any>;
     _getBlocks(blockHashes: any): Promise<any[]>;
-    */
+  */
 
   getEvents(fromBlock: any, toBlock: any): Promise<EthereumEvent[]>;
 }
-
-export = EventFetcher;
