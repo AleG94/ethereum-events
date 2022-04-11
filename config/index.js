@@ -5,5 +5,6 @@ module.exports = {
   confirmations: 12,
   chunkSize: 10000,
   concurrency: 10,
-  backoff: 1000
+  backoff: 1000,
+  ignoreUnknownEvents: false
 };

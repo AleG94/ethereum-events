@@ -4,6 +4,7 @@ const chaiAsPromised = require('chai-as-promised');
 const sinon = require('sinon');
 const event = require('../fixtures/event.json');
 const log = require('../fixtures/log.json');
+const unknownLog = require('../fixtures/unknown-log.json');
 const abi = require('../fixtures/abi.json');
 const block = require('../fixtures/block.json');
 const EventFetcher = require('../../lib/core/event-fetcher');
@@ -89,6 +90,29 @@ describe('Event Fetcher', function () {
     it('should get no events if none of them matches the filter', async function () {
       const contractWithFilters = { ...contract, events: ['RandomEvent'] };
       const eventFetcher = new EventFetcher(this.web3, [contractWithFilters]);
+      const events = await eventFetcher.getEvents(fromBlock, toBlock);
+
+      events.should.have.length(0);
+    });
+  });
+
+  context('unknown events', function () {
+    beforeEach(function () {
+      this.web3.eth.getPastLogs = sinon.stub().resolves([unknownLog]);
+    });
+
+    afterEach(function () {
+      sinon.restore();
+    });
+
+    it('should throw an error if ignoreUnknownEvents = false', async function () {
+      const eventFetcher = new EventFetcher(this.web3, [contract], { ignoreUnknownEvents: false });
+
+      return eventFetcher.getEvents(fromBlock, toBlock).should.be.eventually.rejectedWith('Cannot parse unknown event');
+    });
+
+    it('should ignore the event ignoreUnknownEvents = true', async function () {
+      const eventFetcher = new EventFetcher(this.web3, [contract], { ignoreUnknownEvents: true });
       const events = await eventFetcher.getEvents(fromBlock, toBlock);
 
       events.should.have.length(0);
