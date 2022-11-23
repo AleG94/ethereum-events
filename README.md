@@ -68,7 +68,8 @@ const options = {
   confirmations: 12,   // n° of confirmation blocks (default: 12)
   chunkSize: 10000,    // n° of blocks to fetch at a time (default: 10000)
   concurrency: 10,     // maximum n° of concurrent web3 requests (default: 10)
-  backoff: 1000        // retry backoff in milliseconds (default: 1000)
+  backoff: 1000,       // retry backoff in milliseconds (default: 1000)
+  partialAbi: false    // support a partial abi file (default: false)
 };
 
 const web3 = new Web3(WEB3_PROVIDER);
