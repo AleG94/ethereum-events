@@ -1,6 +1,6 @@
 {
   "name": "ethereum-events",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Efficient and reliable event listener for Ethereum.",
   "main": "index.js",
   "scripts": {
