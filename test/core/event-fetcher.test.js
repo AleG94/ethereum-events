@@ -5,12 +5,51 @@ const sinon = require('sinon');
 const event = require('../fixtures/event.json');
 const log = require('../fixtures/log.json');
 const abi = require('../fixtures/abi.json');
+const incompleteAbi = require('../fixtures/incomplete-abi.json');
 const block = require('../fixtures/block.json');
 const EventFetcher = require('../../lib/core/event-fetcher');
 const { BlockNotFoundError } = require('../../lib/errors');
+const { expect } = require('chai');
 
 chai.should();
 chai.use(chaiAsPromised);
+
+describe("Incomplete abi", () => {
+  const blockHash = event.blockHash;
+  const fromBlock = event.blockNumber - 1;
+  const toBlock = event.blockNumber;
+  const contract = {
+    name: event.contract,
+    address: event.to,
+    abi: incompleteAbi,
+  };
+
+  beforeEach(function () {
+    this.web3 = {
+      eth: {
+        getBlock: sinon.stub().withArgs(blockHash).resolves(block),
+        getPastLogs: sinon.stub().resolves([log]),
+      },
+    };
+  });
+
+  it("should fail with incomplete abi", async function () {
+    const eventFetcher = new EventFetcher(this.web3, [contract]);
+    try {
+      await eventFetcher.getEvents(fromBlock, toBlock);
+    } catch (err) {
+      expect(err.message).to.be.eq("Cannot parse unknown event");
+    }
+  });
+
+  it("should not fail with incomplete abi", async function () {
+    const eventFetcher = new EventFetcher(this.web3, [contract], {
+      partialAbi: true,
+    });
+    const events = await eventFetcher.getEvents(fromBlock, toBlock);
+    events.should.have.length(0);
+  });
+});
 
 describe('Event Fetcher', function () {
   const blockHash = event.blockHash;
